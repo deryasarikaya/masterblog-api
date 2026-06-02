@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
-
+import json
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
@@ -24,33 +24,42 @@ POSTS = [
 ]
 
 
+def load_posts():
+    with open('posts.json', 'r') as f:
+        return json.load(f)
+
+def save_posts(posts):
+    with open('posts.json', 'w') as f:
+        json.dump(posts, f)
+
+
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
+    posts = load_posts()
     sort = request.args.get('sort')
     direction = request.args.get('direction', 'asc')
 
     if sort and sort not in ['title', 'content']:
-        return jsonify({"error": "Invalid sort field. Use 'title' or 'content'"}), 400
+        return jsonify({"error": "Invalid sort field"}), 400
 
     if direction not in ['asc', 'desc']:
-        return jsonify({"error": "Invalid direction. Use 'asc' or 'desc'"}), 400
-
-    sorted_posts = POSTS.copy()
+        return jsonify({"error": "Invalid direction"}), 400
 
     if sort:
-        sorted_posts = sorted(sorted_posts, key=lambda post: post[sort], reverse=(direction == 'desc'))
+        posts = sorted(posts, key=lambda post: post[sort], reverse=(direction == 'desc'))
 
-    return jsonify(sorted_posts), 200
+    return jsonify(posts), 200
 
 
 @app.route('/api/posts', methods=['POST'])
 def add_post():
+    posts = load_posts()
     data = request.get_json()
 
     if not data.get('title') or not data.get('content'):
         return jsonify({"error": "Title and content are required"}), 400
 
-    new_id = max(post['id'] for post in POSTS) + 1
+    new_id = max(post['id'] for post in posts) + 1
 
     new_post = {
         "id": new_id,
@@ -58,24 +67,27 @@ def add_post():
         "content": data['content']
     }
 
-    POSTS.append(new_post)
+    posts.append(new_post)
+    save_posts(posts)
     return jsonify(new_post), 201
-
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE'])
 def delete_post(post_id):
-    post = next((p for p in POSTS if p['id'] == post_id), None)
+    posts = load_posts()
+    post = next((p for p in posts if p['id'] == post_id), None)
 
     if post is None:
         return jsonify({"error": f"Post with id {post_id} not found"}), 404
 
-    POSTS.remove(post)
+    posts.remove(post)
+    save_posts(posts)
     return jsonify({"message": f"Post with id {post_id} has been deleted successfully."}), 200
 
 
 @app.route('/api/posts/<int:post_id>', methods=['PUT'])
 def update_post(post_id):
-    post = next((p for p in POSTS if p['id'] == post_id), None)
+    posts = load_posts()
+    post = next((p for p in posts if p['id'] == post_id), None)
 
     if post is None:
         return jsonify({"error": f"Post with id {post_id} not found"}), 404
@@ -84,6 +96,7 @@ def update_post(post_id):
     post['title'] = data.get('title', post['title'])
     post['content'] = data.get('content', post['content'])
 
+    save_posts(posts)
     return jsonify(post), 200
 
 
