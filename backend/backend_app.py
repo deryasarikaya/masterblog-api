@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 import json
+import os
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
@@ -25,11 +26,13 @@ POSTS = [
 
 
 def load_posts():
-    with open('posts.json', 'r') as f:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(base_dir, 'posts.json'), 'r') as f:
         return json.load(f)
 
 def save_posts(posts):
-    with open('posts.json', 'w') as f:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(base_dir, 'posts.json'), 'w') as f:
         json.dump(posts, f)
 
 
