@@ -26,18 +26,29 @@ POSTS = [
 
 
 def load_posts():
+    """Load posts from JSON file."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(base_dir, 'posts.json'), 'r') as f:
-        return json.load(f)
+    try:
+        with open(os.path.join(base_dir, 'posts.json'), 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
 
 def save_posts(posts):
+    """Save posts to JSON file."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(base_dir, 'posts.json'), 'w') as f:
-        json.dump(posts, f)
+    try:
+        with open(os.path.join(base_dir, 'posts.json'), 'w') as f:
+            json.dump(posts, f)
+    except IOError as e:
+        print(f"Error saving posts: {e}")
 
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
+    """Return all posts, with optional sorting."""
+
     posts = load_posts()
     sort = request.args.get('sort')
     direction = request.args.get('direction', 'asc')
@@ -56,6 +67,8 @@ def get_posts():
 
 @app.route('/api/posts', methods=['POST'])
 def add_post():
+    """Add a new post."""
+
     posts = load_posts()
     data = request.get_json()
 
@@ -76,6 +89,8 @@ def add_post():
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE'])
 def delete_post(post_id):
+    """Delete a post by ID."""
+
     posts = load_posts()
     post = next((p for p in posts if p['id'] == post_id), None)
 
@@ -89,6 +104,8 @@ def delete_post(post_id):
 
 @app.route('/api/posts/<int:post_id>', methods=['PUT'])
 def update_post(post_id):
+    """Update a post by ID."""
+
     posts = load_posts()
     post = next((p for p in posts if p['id'] == post_id), None)
 
@@ -105,11 +122,13 @@ def update_post(post_id):
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
+    """Search posts by title or content."""
+    posts = load_posts()
     title = request.args.get('title')
     content = request.args.get('content')
 
     results = [
-        post for post in POSTS
+        post for post in posts
         if (title and title.lower() in post['title'].lower())
            or (content and content.lower() in post['content'].lower())
     ]
